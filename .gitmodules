@@ -1,0 +1,3 @@
+[submodule "egg-opt"]
+	path = egg-opt
+	url = git@github.com:ebdemir/egg-opt.git
