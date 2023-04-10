@@ -32,6 +32,7 @@ parse_llvm_file(
 	llvm::SMDiagnostic d;
 	auto module = llvm::parseIRFile(file.to_str(), d, ctx);
 	if (!module) {
+		std::cout << "failed to create llvm module\n";
 		d.print(executable, llvm::errs());
 		exit(EXIT_FAILURE);
 	}

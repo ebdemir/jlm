@@ -5,6 +5,7 @@
 
 #include <jlm/opt/alias-analyses/Optimization.hpp>
 #include <jlm/opt/cne.hpp>
+#include <jlm/opt/egg.hpp>
 #include <jlm/opt/DeadNodeElimination.hpp>
 #include <jlm/opt/inlining.hpp>
 #include <jlm/opt/InvariantValueRedirection.hpp>
@@ -367,6 +368,7 @@ JlmOptCommandLineParser::GetOptimization(enum OptimizationId id)
   static aa::SteensgaardAgnostic steensgaardAgnostic;
   static aa::SteensgaardRegionAware steensgaardRegionAware;
   static cne commonNodeElimination;
+  static egg equalitySaturation;
   static DeadNodeElimination deadNodeElimination;
   static fctinline functionInlining;
   static InvariantValueRedirection invariantValueRedirection;
@@ -381,6 +383,7 @@ JlmOptCommandLineParser::GetOptimization(enum OptimizationId id)
       {OptimizationId::AASteensgaardAgnostic,     &steensgaardAgnostic},
       {OptimizationId::AASteensgaardRegionAware,  &steensgaardRegionAware},
       {OptimizationId::cne,                       &commonNodeElimination},
+      {OptimizationId::egg,                       &equalitySaturation},
       {OptimizationId::dne,                       &deadNodeElimination},
       {OptimizationId::iln,                       &functionInlining},
       {OptimizationId::InvariantValueRedirection, &invariantValueRedirection},
@@ -541,6 +544,10 @@ JlmOptCommandLineParser::ParseCommandLineArguments(int argc, char **argv)
         OptimizationId::cne,
         "cne",
         "Common node elimination"),
+      clEnumValN(
+        OptimizationId::egg,
+        "egg",
+        "Equality saturation"),
       clEnumValN(
         OptimizationId::dne,
         "dne",

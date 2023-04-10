@@ -459,6 +459,7 @@ public:
   enum class OptimizationId {
     AASteensgaardAgnostic,
     AASteensgaardRegionAware,
+	egg,
     cne,
     dne,
     iln,

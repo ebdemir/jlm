@@ -273,6 +273,7 @@ JlmOptCommand::ToString(const Optimization & optimization)
           {Optimization::AASteensgaardAgnostic,     "--AASteensgaardAgnostic"},
           {Optimization::AASteensgaardRegionAware,  "--AASteensgaardRegionAware"},
           {Optimization::CommonNodeElimination,     "--cne"},
+          {Optimization::EqualitySaturation,        "--egg"},
           {Optimization::DeadNodeElimination,       "--dne"},
           {Optimization::FunctionInlining,          "--iln"},
           {Optimization::InvariantValueRedirection, "--InvariantValueRedirection"},

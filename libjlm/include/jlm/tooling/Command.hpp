@@ -340,6 +340,7 @@ public:
   enum class Optimization {
     AASteensgaardAgnostic,
     AASteensgaardRegionAware,
+	EqualitySaturation,
     CommonNodeElimination,
     DeadNodeElimination,
     FunctionInlining,
