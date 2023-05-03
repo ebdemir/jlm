@@ -9,9 +9,6 @@ echo ""
 echo "jlc-debug              Compile jlc compiler in debug mode"
 echo "jlc-release            Compile jlc compiler in release mode"
 echo ""
-echo "jlm-print-debug        Compile jlm printer in debug mode"
-echo "jlm-print-release      Compile jlm printer in release mode"
-echo ""
 echo "jlm-opt-debug          Compile jlm optimizer in debug mode"
 echo "jlm-opt-release        Compile jlm optimizer in release mode"
 echo ""
@@ -21,17 +18,17 @@ endef
 
 # Try to detect llvm-config 
 CONFIG        := $(shell command -v llvm-config 2> /dev/null)
-CONFIGVERSION := $(shell command -v llvm-config-14 2> /dev/null)
+CONFIGVERSION := $(shell command -v llvm-config-15 2> /dev/null)
 ifdef LLVMCONFIG
   $(info LLVMCONFIG specified by user)
 else ifdef CONFIGVERSION
-  $(info Found llvm-config-14)
-  LLVMCONFIG ?= llvm-config-14
+  $(info Found llvm-config-15)
+  LLVMCONFIG ?= llvm-config-15
 else ifdef CONFIG
-  $(info Found llvm-config (make sure that it is LLVM 14))
+  $(info Found llvm-config (make sure that it is LLVM 15))
   LLVMCONFIG ?= llvm-config
 else
-  $(info Did not find llvm-config or llvm-config-14 and LLVMCONFIG is not specified)
+  $(info Did not find llvm-config or llvm-config-15 and LLVMCONFIG is not specified)
 endif
 
 JLM_BIN = $(JLM_ROOT)/bin
@@ -55,10 +52,11 @@ $(JLM_BUILD)/%.a:
 	ar cqv $@ $^
 	ranlib $@
 
-include $(JLM_ROOT)/libjive/Makefile.sub
+include $(JLM_ROOT)/jlm/llvm/Makefile.sub
+include $(JLM_ROOT)/jlm/rvsdg/Makefile.sub
+include $(JLM_ROOT)/jlm/util/Makefile.sub
 include $(JLM_ROOT)/libjlm/Makefile.sub
 include $(JLM_ROOT)/jlc/Makefile.sub
-include $(JLM_ROOT)/jlm-print/Makefile.sub
 include $(JLM_ROOT)/jlm-opt/Makefile.sub
 include $(JLM_ROOT)/jlm-hls/Makefile.sub
 include $(JLM_ROOT)/jhls/Makefile.sub
@@ -66,10 +64,10 @@ include $(JLM_ROOT)/docs/Makefile.sub
 include $(JLM_ROOT)/tests/Makefile.sub
 
 .PHONY: jlm-debug
-jlm-debug: libjlm-debug jlm-print-debug jlm-opt-debug jlm-hls-debug jlc-debug jhls-debug
+jlm-debug: libutil-debug libjlm-debug jlm-opt-debug jlm-hls-debug jlc-debug jhls-debug
 
 .PHONY: jlm-release
-jlm-release: libjlm-release jlm-print-release jlm-opt-release jlm-hls-release jlc-release jhls-release
+jlm-release: libutil-release libjlm-release jlm-opt-release jlm-hls-release jlc-release jhls-release
 
 .PHONY: jlm-clean
 jlm-clean:

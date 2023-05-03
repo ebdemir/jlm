@@ -3,38 +3,35 @@
  * See COPYING for terms of redistribution.
  */
 
-#include <jlm/backend/hls/rvsdg2rhls/rvsdg2rhls.hpp>
-#include <jive/rvsdg/substitution.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/remove-unused-state.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/add-triggers.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/gamma-conv.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/theta-conv.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/add-sinks.hpp>
 #include <jlm/backend/hls/rvsdg2rhls/add-forks.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/rhls-dne.hpp>
-#include <jlm/opt/InvariantValueRedirection.hpp>
-#include <jlm/opt/inversion.hpp>
-#include <jlm/opt/cne.hpp>
-#include <jlm/backend/hls/rvsdg2rhls/check-rhls.hpp>
-#include <jlm/ir/RvsdgModule.hpp>
-#include <jive/rvsdg/traverser.hpp>
-#include <jlm/ir/operators/delta.hpp>
 #include <jlm/backend/hls/rvsdg2rhls/add-prints.hpp>
-#include <jlm/backend/llvm/rvsdg2jlm/rvsdg2jlm.hpp>
-#include <jlm/backend/llvm/jlm2llvm/jlm2llvm.hpp>
-
-#include <regex>
+#include <jlm/backend/hls/rvsdg2rhls/add-sinks.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/add-triggers.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/check-rhls.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/gamma-conv.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/remove-unused-state.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/rhls-dne.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/rvsdg2rhls.hpp>
+#include <jlm/backend/hls/rvsdg2rhls/theta-conv.hpp>
+#include <jlm/llvm/backend/jlm2llvm/jlm2llvm.hpp>
+#include <jlm/llvm/backend/rvsdg2jlm/rvsdg2jlm.hpp>
+#include <jlm/llvm/ir/operators/alloca.hpp>
+#include <jlm/llvm/ir/operators/call.hpp>
+#include <jlm/llvm/ir/operators/delta.hpp>
+#include <jlm/llvm/opt/cne.hpp>
+#include <jlm/llvm/opt/DeadNodeElimination.hpp>
+#include <jlm/llvm/opt/inlining.hpp>
+#include <jlm/llvm/opt/InvariantValueRedirection.hpp>
+#include <jlm/llvm/opt/inversion.hpp>
+#include <jlm/rvsdg/traverser.hpp>
+#include <jlm/util/Statistics.hpp>
 
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/raw_ostream.h>
 #include <llvm/Support/SourceMgr.h>
-#include <jlm/ir/operators/call.hpp>
-#include <jlm/ir/operators/alloca.hpp>
-#include <jlm/opt/inlining.hpp>
-#include <jlm/ir/operators/theta.hpp>
-#include <jlm/util/Statistics.hpp>
-#include "jlm/opt/DeadNodeElimination.hpp"
+
+#include <regex>
 
 void
 pre_opt(jlm::RvsdgModule &rm) {
@@ -61,18 +58,8 @@ namespace jlm {
 		return false;
 	}
 
-	inline bool
-	is_fct_ptr(jive::input *input) {
-		auto pt = dynamic_cast<const jlm::PointerType *>(&input->type());
-		if (!pt)
-			return false;
-		return dynamic_cast<const FunctionType *>(&pt->GetElementType());
-	}
-
 	const jive::output *
 	trace_call(jive::input *input) {
-		JLM_ASSERT(is_fct_ptr(input));
-
 		auto graph = input->region()->graph();
 
 		auto argument = dynamic_cast<const jive::argument *>(input->origin());
@@ -130,9 +117,9 @@ namespace jlm {
 			} else if (auto po = dynamic_cast<const jlm::alloca_op *>(&(node->operation()))) {
 				auto rr = region->graph()->root();
 				auto delta_name = jive::detail::strfmt("hls_alloca_", alloca_cnt++);
-				auto delta_type = jlm::PointerType(po->value_type());
-                std::cout << "alloca " << delta_name << ": " << po->value_type().debug_string() << "\n";
-				auto db = delta::node::Create(rr, delta_type, delta_name, linkage::external_linkage, "", false);
+        PointerType delta_type;
+        std::cout << "alloca " << delta_name << ": " << po->value_type().debug_string() << "\n";
+				auto db = delta::node::Create(rr, po->value_type(), delta_name, linkage::external_linkage, "", false);
 				// create zero constant of allocated type
 				jive::output *cout;
 				if (auto bt = dynamic_cast<const jive::bittype *>(&po->value_type())) {
@@ -253,7 +240,7 @@ jlm::hls::split_hls_function(jlm::RvsdgModule &rm, const std::string &function_n
                     smap.insert(ln->input(i)->origin(), arg);
                     // add export for delta to rm
                     // TODO: check if not already exported and maybe adjust linkage?
-                    rm.Rvsdg().add_export(odn->output(), {odn->type(), odn->name()});
+                    rm.Rvsdg().add_export(odn->output(), {odn->output()->type(), odn->name()});
                 } else {
                     throw jlm::error("Unsupported node type: " + orig_node->operation().debug_string());
                 }
@@ -263,7 +250,7 @@ jlm::hls::split_hls_function(jlm::RvsdgModule &rm, const std::string &function_n
             new_ln = change_linkage(new_ln, linkage::external_linkage);
             jive::result::create(rhls->Rvsdg().root(), new_ln->output(), nullptr, new_ln->output()->type());
             // add function as input to rm and remove it
-            impport im(ln->output()->type(), ln->name(), linkage::external_linkage); //TODO: change linkage?
+            impport im(ln->type(), ln->name(), linkage::external_linkage); //TODO: change linkage?
             auto arg = rm.Rvsdg().add_import(im);
             ln->output()->divert_users(arg);
             remove(ln);
